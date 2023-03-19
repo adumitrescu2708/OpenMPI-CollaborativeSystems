@@ -1,0 +1,146 @@
+@author     Dumitrescu Alexandra
+@since      January 2023
+
+Table of contents
+
+    [1.] About the archive
+    [2.] Data Structures
+    [3.] Algorithms and Implementation Details
+        [3.1.] Task #1
+        [3.2.] Task #2
+        [3.3.] Task #3
+        [3.4.] Task #4 - Bonus
+
+[1.] About the archive
+
+    .
+    |_ tema3.c       - Contains the main function and describes
+    |                   main logic for each task
+    |_ supervisors.c 
+    |  supervisors.h - Contains methods implementation used by supervisors
+    |
+    |_ workers.c     - Contains methods implementation used by workers
+    |  workers.h       
+    |
+    |_ README & Makefile
+
+[2.] Data Structures
+
+| Each process in our topology has the follwing data structures:
+|
+| int *topology[NUMBER_OF_SUPERVISORS] - matrix of NUMBER_OF_SUPERVISORS lines
+|                                        and N columns, where N is the number
+|                                        of workers for each supervisor
+|      topology[i] = array of workers corresponding to the supervisor i
+|
+|
+| int number_of_workers[NUMBER_OF_SUPERVISORS] - vector of number of workers
+|                                                for each supervisor
+|     number_of_workers[i] = X, meaning that supervisor i has X workers
+|
+
+[3.] Algorithms and Implementation Details
+    [3.1] Task #1
+
+|   In this task we are asked for completing and sharing the entire
+|   topology between supervisors and workers.
+|
+|   Steps followed:
+|       - Firstly, each supervisors read and stores its information in
+|         its topology and number_of_workers_vector.
+|       - Secondly, supervisors share their number of workers until they all
+|         know and complete the number_of_workers array.                    (2)
+|       - Thirdly, supervisors share between them their topology until
+|         they all have knowledge of the merged topology.                   (3)
+|       - Lastly, share the final topology to workers. 
+|    [Example]
+|    | SUPERVISOR_0 has [1, 0, 0, 0] --> sends to SUPERVISOR_1
+|    | SUPERVISOR_1 has [0, 2, 0, 0] and updates with received 
+|    |              info from SUPERVISOR_0 [1, 2, 0, 0] --> sends to SUPERVISOR_2
+|    | SUPERVISOR_2 has [0, 0, 2, 0] and updates with received 
+|    |              info from SUPERVISOR_1 [1, 2, 2, 0] --> sends to SUPERVISOR_3
+|    | SUPERVISOR_3 has [0, 0, 0, 1] and updates with received 
+|    |              info from SUPERVISOR_2 [1, 2, 2, 1] --> sends to SUPERVISOR_0
+|    |
+|    | 0 -> 1 -> 2 -> 3      Circular communication between supervisors
+|    | ^______________|
+|    | 
+|    | SUPERVISOR_0 sends to next supervisor the final vector 
+|    | 0 -> 1 -> 2 -> 3      Liniar communication between supervisors
+|    |              
+|    |
+|    | SUPERVISOR_0 has 1 worker -> sends to SUPERVISOR_1
+|    | SUPERVISOR_1 has 2 workers and receives and updates,
+|    |           knowing workers of SUPERVISOR_0 --> sends to SUPERVISOR_2
+|    | SUPERVISOR_2 has 2 workers and receives and updates,
+|    |              knowing workers of SUPERVISOR_0, SUPERVISOR_1 --> sends to SUPERVISOR_3
+|    | SUPERVISOR_3 has 1 worker - 9 and receives and updates, 
+|    |              knowing workers of SUPERVISOR_0, SUPERVISOR_1, SUPERVISOR_2
+|    |                        --> sends back to SUPERVISOR_0
+|    | 0 -> 1 -> 2 -> 3      Circular communication between supervisors
+|    | ^______________|
+|    |
+|    | 0 -> 1 -> 2 -> 3      Liniar communication between supervisors
+|    |                       in which SUPERVISOR_0 shares merged topology
+
+
+    [3.2] Task #2
+
+|   In this task SUPERVISOR_0 receives a number N and computes a vector
+|   of N elements. We want to obtain the same vector but with each element
+|   multipied by 5. We also need to equally share the number of operations
+|   between workers.
+|
+|   This way, my idea was to share between the supervisors the vector
+|   and then each supervisor decides for its workers following the formula:
+|       start_idx = worker_id * (N / W), where W = total number of workers
+|       end_idx = (worker_id + 1) * (N, W)
+|   the corresponding chunk to modify. It then sends to the workers 
+|   the vector and index of chunk and the workers updates and sends back.
+|
+|   Then, after getting back the updates from workers we start a communication
+|   between supervisors starting from SUPERVISOR_1 and send back to
+|   SUPERVISOR_0 the updates adding each time each supervisor's updates.
+|   This way, at the end of the communication SUPERVISOR_0 will have the final
+|   updates.
+|
+|   1 -> 2 -> 3 -> 0    Liniar communication between supervisors after getting
+|                       the updates from their workers and sending
+|                       back to SUPERVISOR_0
+
+    [3.3] Task #3
+
+|   In this task, we have to rethink the above tasks adding the restriction
+|   that the communication between SUPERVISOR_1 and SUPERVISOR_0 is broken.
+|
+|   The steps are the same from above, but the order in communication is
+|   different as follows:
+|
+|    [Example]
+|    SUPERVISOR_0 -> SUPERVISOR_3 -> SUPERVISOR_2 -> SUPERVISOR_1
+|           ^____________|   ^___________|     ^ __________|
+
+
+    [3.4] Task #4 - BONUS
+
+|   In this task, we have to rethink the above tasks adding the restriction
+|   that the SUPERVISOR_1 is isolated.
+|
+|   In this case, in the communication we only have SUPERVISOR_0, 3 and 2
+|   as following:
+|
+|    [Example]
+|    SUPERVISOR_0 -> SUPERVISOR_3 -> SUPERVISOR_2
+|           ^____________|   ^___________|
+|
+|   We added an implementation where each supervisor has a next_neigh and a 
+|   prev_neigh. In this case, SUPERVISOR_1 has no neighs, so its topology
+|   will be empty and for the rest of the supervisors we added their
+|   neighs based on the diagram. We used this neighs to decide when
+|   to end the communication and what to put in the topology.
+|
+|   When equally sharing the number of operations to the workers we can not
+|   use the worker id anymore, because some of them will be missing.
+|   Therefor, the supervisor will compute with another formula the id for
+|   its workers, scaling the id to the number of current workers.
+|
